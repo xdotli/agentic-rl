@@ -1,0 +1,6 @@
+[submodule "terminal-bench-rl"]
+	path = terminal-bench-rl
+	url = https://github.com/Danau5tin/terminal-bench-rl.git
+[submodule "tbench-agentic-data-pipeline"]
+	path = tbench-agentic-data-pipeline
+	url = https://github.com/Danau5tin/tbench-agentic-data-pipeline.git
