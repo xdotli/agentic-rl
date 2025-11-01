@@ -5,9 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 
 interface ScenarioConfig {
-  multiplier: number
-  num_agents: number
-  max_iterations: number
+  total_tasks: number
+  parallelism: number
 }
 
 interface ScenarioInputProps {
@@ -17,8 +16,8 @@ interface ScenarioInputProps {
 
 export function ScenarioInput({ onSubmit, disabled = false }: ScenarioInputProps) {
   const [scenario, setScenario] = useState('')
-  const [multiplier, setMultiplier] = useState(3)
-  const [numAgents, setNumAgents] = useState(20)
+  const [totalTasks, setTotalTasks] = useState(10)
+  const [parallelism, setParallelism] = useState(3)
   const [error, setError] = useState('')
 
   const handleSubmit = () => {
@@ -28,9 +27,8 @@ export function ScenarioInput({ onSubmit, disabled = false }: ScenarioInputProps
     }
 
     const config = {
-      multiplier,
-      num_agents: numAgents,
-      max_iterations: 100
+      total_tasks: totalTasks,
+      parallelism: parallelism
     }
 
     onSubmit(scenario, config)
@@ -65,37 +63,37 @@ export function ScenarioInput({ onSubmit, disabled = false }: ScenarioInputProps
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label htmlFor="multiplier" className="block text-sm font-medium text-gray-700">
-              Task Multiplier
+            <label htmlFor="totalTasks" className="block text-sm font-medium text-gray-700">
+              Total Tasks
             </label>
             <input
-              id="multiplier"
+              id="totalTasks"
               type="number"
               min="1"
-              max="10"
-              value={multiplier}
-              onChange={(e) => setMultiplier(parseInt(e.target.value) || 3)}
+              max="100"
+              value={totalTasks}
+              onChange={(e) => setTotalTasks(parseInt(e.target.value) || 10)}
               disabled={disabled}
               className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors text-sm"
             />
-            <p className="text-xs text-gray-500">Variations per seed task</p>
+            <p className="text-xs text-gray-500">Number of tasks to generate</p>
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="numAgents" className="block text-sm font-medium text-gray-700">
-              Parallel Agents
+            <label htmlFor="parallelism" className="block text-sm font-medium text-gray-700">
+              Parallelism
             </label>
             <input
-              id="numAgents"
+              id="parallelism"
               type="number"
               min="1"
-              max="50"
-              value={numAgents}
-              onChange={(e) => setNumAgents(parseInt(e.target.value) || 20)}
+              max="10"
+              value={parallelism}
+              onChange={(e) => setParallelism(parseInt(e.target.value) || 3)}
               disabled={disabled}
               className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors text-sm"
             />
-            <p className="text-xs text-gray-500">Concurrent data generation</p>
+            <p className="text-xs text-gray-500">Concurrent task generation</p>
           </div>
         </div>
 

@@ -1,0 +1,43 @@
+author_email: weather@bot.org
+author_name: Weather Bot
+category: software-engineering
+difficulty: medium
+expert_time_estimate_min: 25
+instruction: "Create a Python script named `weather_automation.py` that implements\
+  \ a weather retrieval system using the Open Meteo API.\n\nRequirements:\n\n1. **Environment\
+  \ Setup**:\n   - The script must read the OPENMETEO_API_KEY from environment variables\n\
+  \   - Install and import the `requests` Python library\n   - Handle missing API\
+  \ key gracefully with informative error messages\n\n2. **Core Functionality**:\n\
+  \   Implement the following functions in `weather_automation.py`:\n\n   a) `get_weather_data(api_key:\
+  \ str, latitude: float, longitude: float) -> dict`:\n      - Fetches weather data\
+  \ for the provided latitude and longitude using the Open Meteo API\n      - Returns\
+  \ the weather data as a dictionary\n      - Handle API errors appropriately\n\n\
+  \   b) `format_weather_summary(weather_data: dict) -> str`:\n      - Takes a weather\
+  \ data dictionary and formats a summary string\n      - Returns a string in the\
+  \ format: \"Temperature: {temperature}\xB0C, Condition: {condition}\"\n\n   c) `main()`:\n\
+  \      - When run as a script (if __name__ == \"__main__\"):\n      - Read the latitude\
+  \ and longitude from environment variables (LATITUDE and LONGITUDE)\n      - Fetch\
+  \ the weather data using `get_weather_data()`\n      - Print the weather summary\
+  \ using `format_weather_summary()`\n      - Handle any exceptions and print error\
+  \ messages\n\n3. **Code Quality Requirements**:\n   - Include proper error handling\
+  \ (try-except blocks)\n   - Add docstrings to all functions\n   - Use type hints\
+  \ for function parameters and return values\n   - Follow PEP 8 style guidelines\n\
+  \n4. **Testing Compatibility**:\n   - The script must be importable without executing\
+  \ the main block\n   - All functions must be testable independently\n   - Use environment\
+  \ variable OPENMETEO_API_KEY for authentication\n\nConstraints:\n- Do not hardcode\
+  \ API keys in the script\n- Do not create additional files beyond `weather_automation.py`\n\
+  - The script must work with Python 3.12\n- Use only the official `requests` library\
+  \ for HTTP requests (no custom implementations)\n\nSuccess Criteria:\n- All functions\
+  \ are implemented and properly documented\n- The script can be imported and functions\
+  \ called independently\n- Proper error handling for missing API keys\n- Code follows\
+  \ Python best practices and type hints\n"
+junior_time_estimate_min: 50
+max_agent_timeout_sec: 600
+max_test_timeout_sec: 120
+parser_name: pytest
+tags:
+- python
+- api-integration
+- weather-automation
+- sdk
+- open-meteo

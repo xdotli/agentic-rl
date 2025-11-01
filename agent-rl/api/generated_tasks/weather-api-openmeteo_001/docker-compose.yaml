@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  client:
+    build: .
+    environment:
+      - OPENMETEO_API_KEY
+    volumes:
+      - .:/home/tbuser
+    command: ["/bin/bash", "-c", "chmod +x /home/tbuser/weather_fetcher.py && /home/tbuser/weather_fetcher.py"]

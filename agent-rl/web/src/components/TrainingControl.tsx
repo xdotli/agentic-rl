@@ -74,14 +74,8 @@ export function TrainingControl({ onStartTraining, generationCompleted }: Traini
     }
   }, [polling])
 
-  const handleStartTraining = async () => {
-    try {
-      await onStartTraining(config)
-      setPolling(true)
-      setShowConfig(false)
-    } catch (error) {
-      console.error('Training failed:', error)
-    }
+  const handleStartTraining = () => {
+    window.open('https://www.hyperbolic.ai/', '_blank')
   }
 
   return (

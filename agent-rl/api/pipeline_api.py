@@ -1,81 +1,74 @@
 """
-Pipeline API for Agentic RL
-Provides endpoints for scenario submission, seed task generation, and training control
+Pipeline API for Agentic RL using Server-Sent Events (SSE) streaming.
+
+This simplified architecture uses async generators to stream progress updates in real-time,
+eliminating the need for background tasks, polling, and complex state management.
 """
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, List, Any
-import asyncio
-import random
-import time
-from datetime import datetime
-from pathlib import Path
+import json
 import shutil
+import time
+import zipfile
+from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+
+from task_generator import TaskGenerator
+from task_schema import GeneratedTask
 
 router = APIRouter(prefix="/api", tags=["pipeline"])
 
-# In-memory state (would be replaced with database in production)
-pipeline_state = {
+# Simplified state (only for uploaded seeds and config)
+state: dict[str, Any] = {
+    "seed_task_path": None,
     "scenario": None,
-    "config": None,
-    "seed_tasks_uploaded": False,
-    "generation_status": "idle",  # idle, running, completed, failed
-    "generation_progress": 0,
-    "generated_tasks": [],
-    "training_status": "idle",  # idle, running, completed, failed
-    "training_progress": 0,
-    "training_metrics": {},
-    "logs": []
+    "config": {"total_tasks": 10, "parallelism": 3},
 }
+
+# Output directory for generated tasks
+GENERATED_TASKS_DIR = Path(__file__).parent / "generated_tasks"
+GENERATED_TASKS_DIR.mkdir(exist_ok=True)
 
 
 class ScenarioSubmission(BaseModel):
     """Agent task scenario submission"""
+
     scenario: str = Field(..., description="Description of the RL task scenario")
-    config: Dict[str, Any] = Field(
-        default_factory=lambda: {
-            "multiplier": 3,
-            "num_agents": 20,
-            "max_iterations": 100
-        },
-        description="Configuration for data generation"
+    config: dict = Field(
+        default={"total_tasks": 10, "parallelism": 3}, description="Generation configuration"
     )
 
 
-class TrainingConfig(BaseModel):
-    """Training configuration"""
-    learning_rate: float = Field(default=3e-4, description="Learning rate for training")
-    batch_size: int = Field(default=32, description="Batch size")
-    num_epochs: int = Field(default=10, description="Number of training epochs")
-    use_wandb: bool = Field(default=False, description="Enable Weights & Biases logging")
+class GenerationRequest(BaseModel):
+    """Request for task generation"""
+
+    num_tasks: int = Field(default=10, ge=1, le=100, description="Number of tasks to generate")
+    parallelism: int = Field(default=3, ge=1, le=10, description="Number of parallel generations")
+    model: str = Field(default="gpt-5", description="LLM model to use")
 
 
 @router.post("/submit-scenario")
 async def submit_scenario(submission: ScenarioSubmission):
     """Submit agent task scenario and configuration"""
-    pipeline_state["scenario"] = submission.scenario
-    pipeline_state["config"] = submission.config
-    pipeline_state["logs"].append({
-        "timestamp": datetime.now().isoformat(),
-        "level": "info",
-        "message": f"Scenario submitted: {submission.scenario[:50]}..."
-    })
-
+    state["scenario"] = submission.scenario
+    state["config"] = submission.config
     return {
         "status": "success",
         "message": "Scenario submitted successfully",
-        "scenario_id": f"scenario_{int(time.time())}"
+        "scenario_id": f"scenario_{int(time.time())}",
     }
 
 
 @router.post("/upload-seed-tasks")
 async def upload_seed_tasks(file: UploadFile = File(...)):
     """Upload seed tasks zip file"""
-    if not file.filename.endswith('.zip'):
+    if not file.filename or not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="Only .zip files are accepted")
 
-    # Mock: Save uploaded file (in production, extract and process)
+    # Save and extract uploaded file
     upload_dir = Path("/tmp/agent-rl-uploads")
     upload_dir.mkdir(exist_ok=True)
 
@@ -83,212 +76,213 @@ async def upload_seed_tasks(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    pipeline_state["seed_tasks_uploaded"] = True
-    pipeline_state["logs"].append({
-        "timestamp": datetime.now().isoformat(),
-        "level": "info",
-        "message": f"Seed tasks uploaded: {file.filename}"
-    })
+    # Extract the zip file
+    extract_dir = upload_dir / file.filename.replace(".zip", "")
+    if extract_dir.exists():
+        shutil.rmtree(extract_dir)
+    extract_dir.mkdir(exist_ok=True)
 
-    return {
-        "status": "success",
-        "message": f"Uploaded {file.filename}",
-        "file_size": file_path.stat().st_size
-    }
+    try:
+        with zipfile.ZipFile(file_path, "r") as zip_ref:
+            zip_ref.extractall(extract_dir)
 
+        # Find the task directory (should contain task.yaml)
+        task_dirs = list(extract_dir.rglob("task.yaml"))
+        if not task_dirs:
+            raise HTTPException(
+                status_code=400, detail="Invalid seed task: task.yaml not found in the zip file"
+            )
 
-@router.post("/generate-seed-tasks")
-async def generate_seed_tasks():
-    """Start seed task generation process"""
-    if pipeline_state["generation_status"] == "running":
-        raise HTTPException(status_code=400, detail="Generation already in progress")
+        seed_task_path = task_dirs[0].parent
 
-    if not pipeline_state["scenario"]:
-        raise HTTPException(status_code=400, detail="Please submit a scenario first")
+        # Validate required files
+        required_files = ["task.yaml", "Dockerfile"]
+        for req_file in required_files:
+            if not (seed_task_path / req_file).exists():
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid seed task: {req_file} not found"
+                )
 
-    # Start background task
-    asyncio.create_task(_mock_generate_tasks())
+        # Validate tests directory
+        if not (seed_task_path / "tests").exists():
+            raise HTTPException(
+                status_code=400, detail="Invalid seed task: tests/ directory not found"
+            )
 
-    return {
-        "status": "started",
-        "message": "Seed task generation started"
-    }
+        state["seed_task_path"] = str(seed_task_path)
 
-
-async def _mock_generate_tasks():
-    """Mock task generation with simulated progress"""
-    pipeline_state["generation_status"] = "running"
-    pipeline_state["generation_progress"] = 0
-    pipeline_state["generated_tasks"] = []
-
-    pipeline_state["logs"].append({
-        "timestamp": datetime.now().isoformat(),
-        "level": "info",
-        "message": "🎨 Starting Idea Generation Agents..."
-    })
-
-    # Simulate generating 50 tasks
-    num_tasks = 50
-    for i in range(1, num_tasks + 1):
-        await asyncio.sleep(0.5)  # Simulate work
-
-        # Generate mock task
-        task = {
-            "id": f"task_{i:03d}",
-            "name": f"Generated Task {i}",
-            "type": random.choice(["Software Engineering", "Security", "Data Processing", "Debugging"]),
-            "status": "generated",
-            "created_at": datetime.now().isoformat()
+        return {
+            "status": "success",
+            "message": f"Uploaded and extracted {file.filename}",
+            "file_size": file_path.stat().st_size,
+            "seed_task_path": str(seed_task_path),
         }
-        pipeline_state["generated_tasks"].append(task)
-        pipeline_state["generation_progress"] = int((i / num_tasks) * 100)
 
-        # Add periodic logs
-        if i % 10 == 0:
-            pipeline_state["logs"].append({
-                "timestamp": datetime.now().isoformat(),
-                "level": "info",
-                "message": f"✅ Generated {i}/{num_tasks} tasks"
-            })
-
-    pipeline_state["generation_status"] = "completed"
-    pipeline_state["logs"].append({
-        "timestamp": datetime.now().isoformat(),
-        "level": "success",
-        "message": f"🎉 Task generation completed! Generated {num_tasks} tasks"
-    })
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=400, detail="Invalid zip file")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing upload: {str(e)}")
 
 
-@router.get("/generation-status")
-async def get_generation_status():
-    """Get current generation status"""
-    return {
-        "status": pipeline_state["generation_status"],
-        "progress": pipeline_state["generation_progress"],
-        "tasks_generated": len(pipeline_state["generated_tasks"]),
-        "total_tasks": 50,
-        "tasks": pipeline_state["generated_tasks"][-10:]  # Return last 10 tasks
-    }
+async def generate_tasks_stream(num_tasks: int, parallelism: int = 3, model: str = "gpt-5"):
+    """
+    Async generator that yields progress updates as Server-Sent Events.
+    Supports parallel task generation for improved performance.
+    """
+    import asyncio
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # Use default seed task if none uploaded
+    seed_task_path: str | None = state.get("seed_task_path")
+    if not seed_task_path:
+        default_seed = Path(__file__).parent.parent / "example_seeds" / "email-automation-agentmail"
+        if default_seed.exists():
+            seed_task_path = str(default_seed)
+            yield f"data: {json.dumps({'type': 'info', 'message': 'Using default seed task'})}\n\n"
+        else:
+            yield f"data: {json.dumps({'type': 'error', 'message': 'No seed task found'})}\n\n"
+            return
+
+    yield f"data: {json.dumps({'type': 'start', 'total': num_tasks, 'message': f'🎨 Starting task generation (parallelism: {parallelism})'})}\n\n"
+
+    # Initialize generator
+    try:
+        generator = TaskGenerator(model=model)
+        yield f"data: {json.dumps({'type': 'info', 'message': '⚙️ TaskGenerator initialized'})}\n\n"
+    except Exception as e:
+        yield f"data: {json.dumps({'type': 'error', 'message': f'Failed to initialize: {str(e)}'})}\n\n"
+        return
+
+    generated_tasks = []
+    completed_count = 0  # Track completed tasks for accurate progress
+
+    # Get user scenario for context
+    user_scenario = state.get("scenario", "")
+
+    # Generate single task with variation
+    async def generate_single_task(task_num: int):
+        try:
+            # Create variation prompt that respects user scenario and ensures diversity
+            if user_scenario:
+                variation_prompt = f"""Based on the user's scenario: "{user_scenario}"
+
+Generate task variation #{task_num} with these requirements:
+- Must be relevant to the user's scenario
+- Must use a DIFFERENT specific API, tool, or service than other variations
+- Must have a UNIQUE task_name that describes the specific tool/API (e.g., "slack-notification-api", "postgres-backup-s3")
+- Think about different practical applications or tools that fit the scenario
+
+CRITICAL: Ensure task_name is unique and descriptive!"""
+            else:
+                variation_prompt = f"""Generate a UNIQUE task variation #{task_num}.
+
+Requirements:
+- Use a DIFFERENT specific API, tool, or service
+- Create a UNIQUE task_name describing the tool/API (e.g., "github-webhook-automation", "redis-cache-manager")
+- Make this distinctly different from other variations
+
+CRITICAL: Ensure task_name is unique and descriptive!"""
+
+            generated_task: GeneratedTask = await generator.generate_from_seed(
+                seed_task_path=seed_task_path, variation_prompt=variation_prompt
+            )
+            return (task_num, generated_task, None)
+        except Exception as e:
+            return (task_num, None, e)
+
+    # Generate tasks in parallel batches
+    for batch_start in range(1, num_tasks + 1, parallelism):
+        batch_end = min(batch_start + parallelism, num_tasks + 1)
+        batch_size = batch_end - batch_start
+
+        yield f"data: {json.dumps({'type': 'info', 'message': f'🚀 Processing batch {batch_start}-{batch_end-1} ({batch_size} tasks in parallel)...'})}\n\n"
+
+        # Create parallel tasks
+        tasks = [generate_single_task(i) for i in range(batch_start, batch_end)]
+
+        # Wait for all tasks in batch to complete
+        results = await asyncio.gather(*tasks)
+
+        # Process results
+        for task_num, generated_task, error in results:
+            completed_count += 1  # Increment for each task (success or error)
+            if error:
+                logger.error(f"Error generating task {task_num}: {error}")
+                yield f"data: {json.dumps({'type': 'error', 'message': f'❌ Task {task_num} failed: {str(error)[:200]}'})}\n\n"
+                # Send progress update
+                yield f"data: {json.dumps({'type': 'progress', 'current': completed_count, 'total': num_tasks, 'message': f'Progress: {completed_count}/{num_tasks}'})}\n\n"
+                continue
+
+            if not generated_task:
+                continue
+
+            # Save task as JSON only (simplified)
+            task_json = {
+                "task_name": generated_task.task_name,
+                "task_yaml": generated_task.task_yaml.model_dump(),
+                "dockerfile": generated_task.dockerfile,
+                "docker_compose": generated_task.docker_compose,
+                "solution_script": generated_task.solution_script,
+                "run_tests_script": generated_task.run_tests_script,
+                "test_file_content": generated_task.test_file_content,
+            }
+
+            # Save JSON file
+            json_filename = f"{generated_task.task_name}_{task_num:03d}.json"
+            json_path = GENERATED_TASKS_DIR / json_filename
+            with open(json_path, "w") as f:
+                json.dump(task_json, f, indent=2)
+
+            task_info = {
+                "id": task_num,
+                "name": generated_task.task_name,
+                "difficulty": generated_task.task_yaml.difficulty,
+                "category": generated_task.task_yaml.category,
+                "tags": generated_task.task_yaml.tags,
+                "instruction": generated_task.task_yaml.instruction,
+                "json_path": str(json_path),
+                "task_json": task_json,  # Include full task data
+            }
+            generated_tasks.append(task_info)
+
+            # Send success event with updated progress
+            yield f"data: {json.dumps({'type': 'success', 'task': task_info, 'message': f'✅ Generated: {generated_task.task_name}'})}\n\n"
+            yield f"data: {json.dumps({'type': 'progress', 'current': completed_count, 'total': num_tasks, 'message': f'Progress: {completed_count}/{num_tasks}'})}\n\n"
+
+    # Send completion event
+    yield f"data: {json.dumps({'type': 'complete', 'generated': len(generated_tasks), 'total': num_tasks, 'message': '🎉 Generation completed!'})}\n\n"
 
 
-@router.post("/start-training")
-async def start_training(config: TrainingConfig):
-    """Start RL training process"""
-    if pipeline_state["training_status"] == "running":
-        raise HTTPException(status_code=400, detail="Training already in progress")
+@router.post("/generate-tasks-stream")
+async def generate_tasks_endpoint(request: GenerationRequest):
+    """
+    Stream task generation progress using Server-Sent Events (SSE).
 
-    if pipeline_state["generation_status"] != "completed":
-        raise HTTPException(status_code=400, detail="Please complete task generation first")
-
-    # Start background training
-    asyncio.create_task(_mock_training(config))
-
-    return {
-        "status": "started",
-        "message": "Training started",
-        "config": config.model_dump()
-    }
-
-
-async def _mock_training(config: TrainingConfig):
-    """Mock training with simulated progress and metrics"""
-    pipeline_state["training_status"] = "running"
-    pipeline_state["training_progress"] = 0
-    pipeline_state["training_metrics"] = {
-        "epoch": 0,
-        "loss": 0.0,
-        "reward": 0.0,
-        "test_pass_rate": 0.0
-    }
-
-    pipeline_state["logs"].append({
-        "timestamp": datetime.now().isoformat(),
-        "level": "info",
-        "message": "🚀 Starting RL Training..."
-    })
-
-    # Simulate training epochs
-    for epoch in range(1, config.num_epochs + 1):
-        await asyncio.sleep(2)  # Simulate epoch time
-
-        # Simulate improving metrics
-        loss = 2.0 * (1 - epoch / config.num_epochs) + random.uniform(-0.1, 0.1)
-        reward = 0.3 + (0.6 * epoch / config.num_epochs) + random.uniform(-0.05, 0.05)
-        test_pass_rate = 0.2 + (0.7 * epoch / config.num_epochs) + random.uniform(-0.03, 0.03)
-
-        pipeline_state["training_metrics"] = {
-            "epoch": epoch,
-            "loss": round(loss, 4),
-            "reward": round(reward, 4),
-            "test_pass_rate": round(test_pass_rate, 4)
-        }
-        pipeline_state["training_progress"] = int((epoch / config.num_epochs) * 100)
-
-        pipeline_state["logs"].append({
-            "timestamp": datetime.now().isoformat(),
-            "level": "info",
-            "message": f"📊 Epoch {epoch}/{config.num_epochs} - Loss: {loss:.4f}, Reward: {reward:.4f}, Pass Rate: {test_pass_rate:.2%}"
-        })
-
-    pipeline_state["training_status"] = "completed"
-    pipeline_state["logs"].append({
-        "timestamp": datetime.now().isoformat(),
-        "level": "success",
-        "message": "🎉 Training completed successfully!"
-    })
-
-
-@router.get("/training-status")
-async def get_training_status():
-    """Get current training status"""
-    return {
-        "status": pipeline_state["training_status"],
-        "progress": pipeline_state["training_progress"],
-        "metrics": pipeline_state["training_metrics"]
-    }
-
-
-@router.get("/logs")
-async def get_logs(limit: int = 50):
-    """Get recent logs"""
-    return {
-        "logs": pipeline_state["logs"][-limit:]
-    }
-
-
-@router.post("/reset")
-async def reset_pipeline():
-    """Reset pipeline state (for testing)"""
-    pipeline_state.update({
-        "scenario": None,
-        "config": None,
-        "seed_tasks_uploaded": False,
-        "generation_status": "idle",
-        "generation_progress": 0,
-        "generated_tasks": [],
-        "training_status": "idle",
-        "training_progress": 0,
-        "training_metrics": {},
-        "logs": []
-    })
-
-    return {"status": "success", "message": "Pipeline reset"}
-
-
-@router.get("/pipeline-status")
-async def get_pipeline_status():
-    """Get overall pipeline status"""
-    return {
-        "scenario_submitted": pipeline_state["scenario"] is not None,
-        "seed_tasks_uploaded": pipeline_state["seed_tasks_uploaded"],
-        "generation": {
-            "status": pipeline_state["generation_status"],
-            "progress": pipeline_state["generation_progress"],
-            "tasks_count": len(pipeline_state["generated_tasks"])
+    Features:
+    - Real-time progress updates via SSE
+    - Parallel task generation for improved performance
+    - No global state needed for progress
+    - Errors are immediately visible
+    - Automatic cleanup when client disconnects
+    """
+    return StreamingResponse(
+        generate_tasks_stream(request.num_tasks, request.parallelism, request.model),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
         },
-        "training": {
-            "status": pipeline_state["training_status"],
-            "progress": pipeline_state["training_progress"],
-            "metrics": pipeline_state["training_metrics"]
-        }
+    )
+
+
+@router.get("/status")
+async def get_status():
+    """Get current configuration status"""
+    return {
+        "scenario_submitted": state["scenario"] is not None,
+        "seed_task_uploaded": state["seed_task_path"] is not None,
+        "seed_task_path": state["seed_task_path"],
     }

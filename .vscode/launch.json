@@ -1,0 +1,47 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FastAPI Backend (Debug)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "main:app",
+        "--reload",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ],
+      "cwd": "${workspaceFolder}/agent-rl/api",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/agent-rl/api"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "python": "${workspaceFolder}/agent-rl/api/.venv/bin/python"
+    },
+    {
+      "name": "FastAPI Backend (Run)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "main:app",
+        "--reload",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ],
+      "cwd": "${workspaceFolder}/agent-rl/api",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/agent-rl/api"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}
+

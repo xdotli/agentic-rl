@@ -1,0 +1,42 @@
+author_email: weather@guru.org
+author_name: Weather Guru
+category: software-engineering
+difficulty: medium
+expert_time_estimate_min: 25
+instruction: "Create a Python script named `weather_fetcher.py` that implements a\
+  \ weather fetching system using the Open Meteo API.\n\nRequirements:\n\n1. **Environment\
+  \ Setup**:\n   - The script must read the OPEN_METEO_API_KEY from environment variables\n\
+  \   - Install and import the `requests` Python package\n   - Handle missing API\
+  \ key gracefully with informative error messages\n\n2. **Core Functionality**:\n\
+  \   Implement the following functions in `weather_fetcher.py`:\n\n   a) `get_weather_data(location:\
+  \ str, client: Any) -> dict`:\n      - Retrieves weather data for a specified location\
+  \ using the Open Meteo API.\n      - Returns a dictionary containing the weather\
+  \ data.\n      - Handle API errors appropriately.\n\n   b) `format_weather_report(weather_data:\
+  \ dict) -> str`:\n      - Takes a weather data dictionary and formats a readable\
+  \ weather report string.\n      - Returns a string in the format: \"Location: {location},\
+  \ Temperature: {temp}\xB0C, Condition: {condition}\"\n\n   c) `main()`:\n      -\
+  \ When run as a script (if __name__ == \"__main__\"):\n      - Get the location\
+  \ from the user input.\n      - Retrieve the weather data using `get_weather_data()`.\n\
+  \      - Print the formatted weather report.\n      - Handle any exceptions and\
+  \ print appropriate error messages.\n\n3. **Code Quality Requirements**:\n   - Include\
+  \ proper error handling (try-except blocks)\n   - Add docstrings to all functions\n\
+  \   - Use type hints for function parameters and return values\n   - Follow PEP\
+  \ 8 style guidelines\n\n4. **Testing Compatibility**:\n   - The script must be importable\
+  \ without executing the main block\n   - All functions must be testable independently\n\
+  \   - Use environment variable OPEN_METEO_API_KEY for authentication\n\nConstraints:\n\
+  - Do not hardcode API keys in the script\n- Do not create additional files beyond\
+  \ `weather_fetcher.py`\n- The script must work with Python 3.12\n- Use only the\
+  \ official `requests` library (no custom implementations)\n\nSuccess Criteria:\n\
+  - All functions are implemented and properly documented\n- The script can be imported\
+  \ and functions called independently\n- Proper error handling for missing API keys\n\
+  - Code follows Python best practices and type hints\n"
+junior_time_estimate_min: 50
+max_agent_timeout_sec: 600
+max_test_timeout_sec: 120
+parser_name: pytest
+tags:
+- python
+- api-integration
+- weather-fetching
+- sdk
+- open-meteo

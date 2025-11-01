@@ -12,10 +12,11 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState<Step>("scenario");
   const [scenarioSubmitted, setScenarioSubmitted] = useState(false);
   const [generationCompleted, setGenerationCompleted] = useState(false);
+  const [config, setConfig] = useState({ total_tasks: 10, parallelism: 3 });
 
   const handleScenarioSubmit = async (
     scenario: string,
-    config: { multiplier: number; num_agents: number; max_iterations: number },
+    submittedConfig: { total_tasks: number; parallelism: number },
   ) => {
     try {
       const response = await fetch(
@@ -23,11 +24,12 @@ export default function Home() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scenario, config }),
+          body: JSON.stringify({ scenario, config: submittedConfig }),
         },
       );
 
       if (response.ok) {
+        setConfig(submittedConfig);
         setScenarioSubmitted(true);
         setTimeout(() => setCurrentStep("upload"), 500);
       }
@@ -61,24 +63,8 @@ export default function Home() {
     setTimeout(() => setCurrentStep("generate"), 500);
   };
 
-  const handleGenerate = async () => {
-    const response = await fetch(
-      "http://localhost:8000/api/generate-seed-tasks",
-      {
-        method: "POST",
-      },
-    );
-
-    if (response.ok) {
-      // Will be tracked by polling in TaskGenerationPanel
-      setTimeout(() => {
-        setGenerationCompleted(true);
-        // Don't auto-jump to training, let user download first
-      }, 26000); // Mock: set after ~26 seconds
-    }
-  };
-
   const handleContinueToTraining = () => {
+    setGenerationCompleted(true);
     setCurrentStep("training");
   };
 
@@ -211,9 +197,9 @@ export default function Home() {
             {currentStep === "generate" && (
               <div className="transition-opacity duration-300">
                 <TaskGenerationPanel
-                  onGenerate={handleGenerate}
                   scenarioSubmitted={scenarioSubmitted}
                   onContinue={handleContinueToTraining}
+                  config={config}
                 />
               </div>
             )}

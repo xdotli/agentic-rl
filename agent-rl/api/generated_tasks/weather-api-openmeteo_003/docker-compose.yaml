@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  client:
+    build: .
+    volumes:
+      - .:/home/tbuser
+    environment:
+      OPENMETEO_API_KEY: ${OPENMETEO_API_KEY}
+      LATITUDE: ${LATITUDE}
+      LONGITUDE: ${LONGITUDE}
+    command: ["/bin/bash", "-c", "python3 weather_automation.py"]
