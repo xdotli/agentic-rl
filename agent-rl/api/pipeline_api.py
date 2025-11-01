@@ -1,5 +1,5 @@
 """
-Pipeline API for Agent Dojo
+Pipeline API for Agentic RL
 Provides endpoints for scenario submission, seed task generation, and training control
 """
 
@@ -61,7 +61,7 @@ async def submit_scenario(submission: ScenarioSubmission):
         "level": "info",
         "message": f"Scenario submitted: {submission.scenario[:50]}..."
     })
-    
+
     return {
         "status": "success",
         "message": "Scenario submitted successfully",
@@ -74,22 +74,22 @@ async def upload_seed_tasks(file: UploadFile = File(...)):
     """Upload seed tasks zip file"""
     if not file.filename.endswith('.zip'):
         raise HTTPException(status_code=400, detail="Only .zip files are accepted")
-    
+
     # Mock: Save uploaded file (in production, extract and process)
     upload_dir = Path("/tmp/agent-rl-uploads")
     upload_dir.mkdir(exist_ok=True)
-    
+
     file_path = upload_dir / file.filename
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    
+
     pipeline_state["seed_tasks_uploaded"] = True
     pipeline_state["logs"].append({
         "timestamp": datetime.now().isoformat(),
         "level": "info",
         "message": f"Seed tasks uploaded: {file.filename}"
     })
-    
+
     return {
         "status": "success",
         "message": f"Uploaded {file.filename}",
@@ -102,13 +102,13 @@ async def generate_seed_tasks():
     """Start seed task generation process"""
     if pipeline_state["generation_status"] == "running":
         raise HTTPException(status_code=400, detail="Generation already in progress")
-    
+
     if not pipeline_state["scenario"]:
         raise HTTPException(status_code=400, detail="Please submit a scenario first")
-    
+
     # Start background task
     asyncio.create_task(_mock_generate_tasks())
-    
+
     return {
         "status": "started",
         "message": "Seed task generation started"
@@ -120,18 +120,18 @@ async def _mock_generate_tasks():
     pipeline_state["generation_status"] = "running"
     pipeline_state["generation_progress"] = 0
     pipeline_state["generated_tasks"] = []
-    
+
     pipeline_state["logs"].append({
         "timestamp": datetime.now().isoformat(),
         "level": "info",
         "message": "🎨 Starting Idea Generation Agents..."
     })
-    
+
     # Simulate generating 50 tasks
     num_tasks = 50
     for i in range(1, num_tasks + 1):
         await asyncio.sleep(0.5)  # Simulate work
-        
+
         # Generate mock task
         task = {
             "id": f"task_{i:03d}",
@@ -142,7 +142,7 @@ async def _mock_generate_tasks():
         }
         pipeline_state["generated_tasks"].append(task)
         pipeline_state["generation_progress"] = int((i / num_tasks) * 100)
-        
+
         # Add periodic logs
         if i % 10 == 0:
             pipeline_state["logs"].append({
@@ -150,7 +150,7 @@ async def _mock_generate_tasks():
                 "level": "info",
                 "message": f"✅ Generated {i}/{num_tasks} tasks"
             })
-    
+
     pipeline_state["generation_status"] = "completed"
     pipeline_state["logs"].append({
         "timestamp": datetime.now().isoformat(),
@@ -176,13 +176,13 @@ async def start_training(config: TrainingConfig):
     """Start RL training process"""
     if pipeline_state["training_status"] == "running":
         raise HTTPException(status_code=400, detail="Training already in progress")
-    
+
     if pipeline_state["generation_status"] != "completed":
         raise HTTPException(status_code=400, detail="Please complete task generation first")
-    
+
     # Start background training
     asyncio.create_task(_mock_training(config))
-    
+
     return {
         "status": "started",
         "message": "Training started",
@@ -200,22 +200,22 @@ async def _mock_training(config: TrainingConfig):
         "reward": 0.0,
         "test_pass_rate": 0.0
     }
-    
+
     pipeline_state["logs"].append({
         "timestamp": datetime.now().isoformat(),
         "level": "info",
         "message": "🚀 Starting RL Training..."
     })
-    
+
     # Simulate training epochs
     for epoch in range(1, config.num_epochs + 1):
         await asyncio.sleep(2)  # Simulate epoch time
-        
+
         # Simulate improving metrics
         loss = 2.0 * (1 - epoch / config.num_epochs) + random.uniform(-0.1, 0.1)
         reward = 0.3 + (0.6 * epoch / config.num_epochs) + random.uniform(-0.05, 0.05)
         test_pass_rate = 0.2 + (0.7 * epoch / config.num_epochs) + random.uniform(-0.03, 0.03)
-        
+
         pipeline_state["training_metrics"] = {
             "epoch": epoch,
             "loss": round(loss, 4),
@@ -223,13 +223,13 @@ async def _mock_training(config: TrainingConfig):
             "test_pass_rate": round(test_pass_rate, 4)
         }
         pipeline_state["training_progress"] = int((epoch / config.num_epochs) * 100)
-        
+
         pipeline_state["logs"].append({
             "timestamp": datetime.now().isoformat(),
             "level": "info",
             "message": f"📊 Epoch {epoch}/{config.num_epochs} - Loss: {loss:.4f}, Reward: {reward:.4f}, Pass Rate: {test_pass_rate:.2%}"
         })
-    
+
     pipeline_state["training_status"] = "completed"
     pipeline_state["logs"].append({
         "timestamp": datetime.now().isoformat(),
@@ -271,7 +271,7 @@ async def reset_pipeline():
         "training_metrics": {},
         "logs": []
     })
-    
+
     return {"status": "success", "message": "Pipeline reset"}
 
 
@@ -292,4 +292,3 @@ async def get_pipeline_status():
             "metrics": pipeline_state["training_metrics"]
         }
     }
-
