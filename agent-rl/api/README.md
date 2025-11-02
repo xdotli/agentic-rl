@@ -1,4 +1,4 @@
-# Agentic RL API
+# Agent Gym API
 
 FastAPI backend for LLM-based task generation using structured outputs.
 

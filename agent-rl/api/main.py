@@ -21,7 +21,7 @@ else:
     print(f"⚠️  .env file not found at {env_path}")
     print("   API keys should be set via environment variables")
 
-app = FastAPI(title="Agentic RL")
+app = FastAPI(title="Agent Gym")
 
 # Configure CORS
 app.add_middleware(

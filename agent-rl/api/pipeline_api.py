@@ -1,5 +1,5 @@
 """
-Pipeline API for Agentic RL using Server-Sent Events (SSE) streaming.
+Pipeline API for Agent Gym using Server-Sent Events (SSE) streaming.
 
 This simplified architecture uses async generators to stream progress updates in real-time,
 eliminating the need for background tasks, polling, and complex state management.

@@ -4,9 +4,12 @@ import { useState } from "react";
 import { ScenarioInput } from "@/components/ScenarioInput";
 import { SeedTaskUpload } from "@/components/SeedTaskUpload";
 import { TaskGenerationPanel } from "@/components/TaskGenerationPanel";
+import { ValidationPanel } from "@/components/ValidationPanel";
 import { TrainingControl } from "@/components/TrainingControl";
+import { DemoLoop } from "@/components/DemoLoop";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type Step = "scenario" | "upload" | "generate" | "training" | "complete";
+type Step = "scenario" | "upload" | "generate" | "validation" | "training" | "complete";
 
 export default function Home() {
   const [currentStep, setCurrentStep] = useState<Step>("scenario");
@@ -63,8 +66,12 @@ export default function Home() {
     setTimeout(() => setCurrentStep("generate"), 500);
   };
 
-  const handleContinueToTraining = () => {
+  const handleContinueToValidation = () => {
     setGenerationCompleted(true);
+    setCurrentStep("validation");
+  };
+
+  const handleValidationComplete = () => {
     setCurrentStep("training");
   };
 
@@ -89,6 +96,7 @@ export default function Home() {
     { id: "scenario", label: "📝 Task Scenario", icon: "📝" },
     { id: "upload", label: "📦 Seed Tasks", icon: "📦" },
     { id: "generate", label: "⚙️ Generate Data", icon: "⚙️" },
+    { id: "validation", label: "✅ Validate Tasks", icon: "✅" },
     { id: "training", label: "🚀 Train Model", icon: "🚀" },
   ];
 
@@ -108,14 +116,34 @@ export default function Home() {
             Powered by Terminal Bench & Hyperbolics
           </div>
           <h1 className="text-4xl font-bold mb-2 text-gray-900 tracking-tight">
-            Agentic RL
+            Agent Gym
           </h1>
           <p className="text-gray-600 text-base">
             Agentic data pipeline + training on any tasks
           </p>
         </div>
 
-        {/* Progress Stepper */}
+        {/* Tabs for Overview and Pipeline */}
+        <Tabs defaultValue="overview" className="w-full">
+          <div className="flex justify-center mb-8">
+            <TabsList className="bg-white border border-gray-200 shadow-sm">
+              <TabsTrigger value="overview" className="data-[state=active]:bg-black data-[state=active]:text-white px-6">
+                🔄 Overview
+              </TabsTrigger>
+              <TabsTrigger value="pipeline" className="data-[state=active]:bg-black data-[state=active]:text-white px-6">
+                🚀 Build Pipeline
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="mt-0">
+            <DemoLoop />
+          </TabsContent>
+
+          {/* Pipeline Tab */}
+          <TabsContent value="pipeline" className="mt-0">
+            {/* Progress Stepper */}
         <div className="max-w-3xl mx-auto mb-10">
           <div className="relative bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             {/* Progress Line */}
@@ -198,13 +226,20 @@ export default function Home() {
               <div className="transition-opacity duration-300">
                 <TaskGenerationPanel
                   scenarioSubmitted={scenarioSubmitted}
-                  onContinue={handleContinueToTraining}
+                  onContinue={handleContinueToValidation}
                   config={config}
                 />
               </div>
             )}
 
-            {/* Step 4: Training */}
+            {/* Step 4: Validation */}
+            {currentStep === "validation" && (
+              <div className="transition-opacity duration-300">
+                <ValidationPanel onComplete={handleValidationComplete} />
+              </div>
+            )}
+
+            {/* Step 5: Training */}
             {currentStep === "training" && (
               <div className="space-y-6 transition-opacity duration-300">
                 <TrainingControl
@@ -215,6 +250,9 @@ export default function Home() {
             )}
           </div>
         </div>
+
+          </TabsContent>
+        </Tabs>
 
         <div className="text-center text-xs text-gray-400 mt-10">
           Built with Claude Code
