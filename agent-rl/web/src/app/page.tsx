@@ -114,7 +114,7 @@ export default function Home() {
             Powered by Terminal Bench & Hyperbolics
           </div>
           <h1 className="text-4xl font-bold mb-2 text-gray-900 tracking-tight">
-            Agentic RL
+            Agent Gym
           </h1>
           <p className="text-gray-600 text-base">
             Agentic data pipeline + training on any tasks

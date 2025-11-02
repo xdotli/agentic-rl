@@ -1,7 +1,7 @@
 [project]
 name = "agentic-rl-api"
 version = "0.1.0"
-description = "Agentic RL API server for scenario submission, seed task generation, and training control"
+description = "Agent Gym API server for scenario submission, seed task generation, and training control"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
