@@ -6,6 +6,8 @@ import { SeedTaskUpload } from "@/components/SeedTaskUpload";
 import { TaskGenerationPanel } from "@/components/TaskGenerationPanel";
 import { ValidationPanel } from "@/components/ValidationPanel";
 import { TrainingControl } from "@/components/TrainingControl";
+import { DemoLoop } from "@/components/DemoLoop";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Step = "scenario" | "upload" | "generate" | "validation" | "training" | "complete";
 
@@ -121,7 +123,27 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Progress Stepper */}
+        {/* Tabs for Overview and Pipeline */}
+        <Tabs defaultValue="overview" className="w-full">
+          <div className="flex justify-center mb-8">
+            <TabsList className="bg-white border border-gray-200 shadow-sm">
+              <TabsTrigger value="overview" className="data-[state=active]:bg-black data-[state=active]:text-white px-6">
+                🔄 Overview
+              </TabsTrigger>
+              <TabsTrigger value="pipeline" className="data-[state=active]:bg-black data-[state=active]:text-white px-6">
+                🚀 Build Pipeline
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="mt-0">
+            <DemoLoop />
+          </TabsContent>
+
+          {/* Pipeline Tab */}
+          <TabsContent value="pipeline" className="mt-0">
+            {/* Progress Stepper */}
         <div className="max-w-3xl mx-auto mb-10">
           <div className="relative bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             {/* Progress Line */}
@@ -228,6 +250,9 @@ export default function Home() {
             )}
           </div>
         </div>
+
+          </TabsContent>
+        </Tabs>
 
         <div className="text-center text-xs text-gray-400 mt-10">
           Built with Claude Code
