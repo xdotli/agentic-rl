@@ -4,9 +4,10 @@ import { useState } from "react";
 import { ScenarioInput } from "@/components/ScenarioInput";
 import { SeedTaskUpload } from "@/components/SeedTaskUpload";
 import { TaskGenerationPanel } from "@/components/TaskGenerationPanel";
+import { ValidationPanel } from "@/components/ValidationPanel";
 import { TrainingControl } from "@/components/TrainingControl";
 
-type Step = "scenario" | "upload" | "generate" | "training" | "complete";
+type Step = "scenario" | "upload" | "generate" | "validation" | "training" | "complete";
 
 export default function Home() {
   const [currentStep, setCurrentStep] = useState<Step>("scenario");
@@ -63,8 +64,12 @@ export default function Home() {
     setTimeout(() => setCurrentStep("generate"), 500);
   };
 
-  const handleContinueToTraining = () => {
+  const handleContinueToValidation = () => {
     setGenerationCompleted(true);
+    setCurrentStep("validation");
+  };
+
+  const handleValidationComplete = () => {
     setCurrentStep("training");
   };
 
@@ -89,6 +94,7 @@ export default function Home() {
     { id: "scenario", label: "📝 Task Scenario", icon: "📝" },
     { id: "upload", label: "📦 Seed Tasks", icon: "📦" },
     { id: "generate", label: "⚙️ Generate Data", icon: "⚙️" },
+    { id: "validation", label: "✅ Validate Tasks", icon: "✅" },
     { id: "training", label: "🚀 Train Model", icon: "🚀" },
   ];
 
@@ -198,13 +204,20 @@ export default function Home() {
               <div className="transition-opacity duration-300">
                 <TaskGenerationPanel
                   scenarioSubmitted={scenarioSubmitted}
-                  onContinue={handleContinueToTraining}
+                  onContinue={handleContinueToValidation}
                   config={config}
                 />
               </div>
             )}
 
-            {/* Step 4: Training */}
+            {/* Step 4: Validation */}
+            {currentStep === "validation" && (
+              <div className="transition-opacity duration-300">
+                <ValidationPanel onComplete={handleValidationComplete} />
+              </div>
+            )}
+
+            {/* Step 5: Training */}
             {currentStep === "training" && (
               <div className="space-y-6 transition-opacity duration-300">
                 <TrainingControl

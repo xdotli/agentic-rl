@@ -78,24 +78,29 @@ class TaskGenerator:
         logger.info(f"[TaskGenerator] Prompt length: {len(user_prompt)} chars")
 
         try:
-            # Call OpenAI with structured outputs (SDK handles timeout internally)
-            response = await self.client.beta.chat.completions.parse(
+            # Call OpenAI Responses API with structured outputs
+            response = await self.client.responses.parse(
                 model=self.model,
-                messages=[
+                input=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                response_format=GeneratedTask,
-                timeout=120.0,  # 2 minutes timeout
+                text_format=GeneratedTask,
+                parallel_tool_calls=True,
+                reasoning={"effort": "minimal"},
+                timeout=120.0,
             )
             logger.info("[TaskGenerator] OpenAI response received")
         except Exception as e:
             logger.error(f"[TaskGenerator] LLM call failed: {type(e).__name__}: {str(e)}")
             raise
 
-        # Extract structured output (OpenAI SDK returns parsed object directly)
+        # Extract structured output from Responses API
         logger.info("[TaskGenerator] Parsing response...")
-        generated_task = response.choices[0].message.parsed
+        generated_task = response.output_parsed
+
+        if generated_task is None:
+            raise ValueError("Failed to parse response: output_parsed is None")
 
         logger.info(f"[TaskGenerator] Task generated successfully: {generated_task.task_name}")
         return generated_task
@@ -182,9 +187,6 @@ IMPORTANT GUIDELINES:
   Examples:
   * "weather-api-openweathermap" (if using OpenWeatherMap API)
   * "database-backup-postgres" (if using PostgreSQL)
-  * "news-api-newsapi" (if using NewsAPI)
-  * "crypto-price-coinbase" (if using Coinbase API)
-  * "file-convert-pandoc" (if using Pandoc)
   DO NOT reuse the seed task name or generate generic names!
 - For Dockerfile: base on ubuntu-24-04, install Python 3.12, create tbuser, install necessary packages
 - For solution_script: use heredoc (cat <<'EOF' > /home/tbuser/script.py) to create the Python script
@@ -210,13 +212,6 @@ IMPORTANT GUIDELINES:
                 "Generate a task using a popular REST API (weather, news, finance, etc.)",
                 "Generate a task involving database operations (SQL, NoSQL)",
                 "Generate a task for file processing or data transformation",
-                "Generate a task using a cloud service SDK (AWS, GCP, Azure)",
-                "Generate a task for web scraping or HTML parsing",
-                "Generate a task involving authentication and security",
-                "Generate a task for working with external APIs",
-                "Generate a task for data validation and processing",
-                "Generate a task involving JSON or YAML manipulation",
-                "Generate a task for automated testing or CI/CD",
             ]
 
             variation_prompt = variation_prompts[i % len(variation_prompts)]
