@@ -1,0 +1,78 @@
+instruction: |
+  Create a Python script named `email_automation.py` that implements an email automation system using the agentmail.to API.
+
+  Requirements:
+
+  1. **Environment Setup**:
+     - The script must read the AGENTMAIL_API_KEY from environment variables
+     - Install and import the `agentmail` Python SDK
+     - Handle missing API key gracefully with informative error messages
+
+  2. **Core Functionality**:
+     Implement the following functions in `email_automation.py`:
+
+     a) `create_inbox(client)`:
+        - Creates a new inbox using agentmail.to API
+        - Returns the inbox object containing inbox_id and email address
+        - Handle API errors appropriately
+
+     b) `send_email(client, inbox_id, to_email, subject, body)`:
+        - Sends an email from the created inbox
+        - Parameters:
+          * client: AgentMail client instance
+          * inbox_id: ID of the inbox to send from
+          * to_email: Recipient email address
+          * subject: Email subject line
+          * body: Email body text
+        - Returns True on success, False on failure
+
+     c) `format_email_summary(inbox_obj)`:
+        - Takes an inbox object and formats a summary string
+        - Returns a string in the format: "Inbox: {email_address} (ID: {inbox_id})"
+
+  3. **Main Execution Block**:
+     When run as a script (if __name__ == "__main__"):
+     - Initialize the AgentMail client with API key from environment
+     - Create a new inbox
+     - Print the inbox summary using format_email_summary()
+     - Send a test email to "test@example.com" with subject "Test Email" and body "This is a test email from AgentMail automation"
+     - Print "Email sent successfully!" if successful
+
+  4. **Code Quality Requirements**:
+     - Include proper error handling (try-except blocks)
+     - Add docstrings to all functions
+     - Use type hints for function parameters and return values
+     - Follow PEP 8 style guidelines
+
+  5. **Testing Compatibility**:
+     - The script must be importable without executing the main block
+     - All functions must be testable independently
+     - Use environment variable AGENTMAIL_API_KEY for authentication
+
+  Constraints:
+  - Do not hardcode API keys in the script
+  - Do not create additional files beyond `email_automation.py`
+  - The script must work with Python 3.12
+  - Use only the official `agentmail` SDK (no custom implementations)
+
+  Success Criteria:
+  - All functions are implemented and properly documented
+  - The script can be imported and functions called independently
+  - Proper error handling for missing API keys
+  - Code follows Python best practices and type hints
+
+author_name: "Terminal Bench"
+author_email: "tb@laude.org"
+difficulty: "medium"
+category: "software-engineering"
+tags:
+  - "python"
+  - "api-integration"
+  - "email-automation"
+  - "sdk"
+  - "agentmail"
+parser_name: "pytest"
+max_agent_timeout_sec: 600
+max_test_timeout_sec: 120
+expert_time_estimate_min: 20
+junior_time_estimate_min: 45

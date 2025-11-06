@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  weather_fetcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/home/tbuser
+    environment:
+      - OPEN_METEO_API_KEY=${OPEN_METEO_API_KEY}
+    command: ["python3", "/home/tbuser/weather_fetcher.py"]
